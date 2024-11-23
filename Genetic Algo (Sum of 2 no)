@@ -1,0 +1,86 @@
+import numpy as np
+
+# Define the neural network structure
+class SimpleNN:
+    def __init__(self):
+        # Initialize weights randomly
+        self.weights = np.random.rand(2, 1)  # Two inputs to one output
+
+    def predict(self, inputs):
+        # Simple linear combination
+        return np.dot(inputs, self.weights)
+
+# Define the fitness function
+def fitness(nn, x, y):
+    predicted = nn.predict(x)
+    return -np.mean(np.square(predicted - y))  # Negative MSE (we want to maximize)
+
+# Create a population of neural networks
+def create_population(size):
+    return [SimpleNN() for _ in range(size)]
+
+# Evolve the population
+def evolve_population(population, x, y, mutation_rate=0.1):
+    scores = [fitness(nn, x, y) for nn in population]
+    sorted_indices = np.argsort(scores)
+
+    # Select the top half of the population
+    survivors = [population[i] for i in sorted_indices[-len(population)//2:]]
+
+    # Create new population through crossover and mutation
+    new_population = []
+    for i in range(len(population)):
+        parent1, parent2 = np.random.choice(survivors, 2, replace=False)
+        child = SimpleNN()
+        # Average the weights of the parents
+        child.weights = (parent1.weights + parent2.weights) / 2
+
+        # Apply mutation
+        if np.random.rand() < mutation_rate:
+            child.weights += np.random.normal(0, 0.1, child.weights.shape)
+
+        new_population.append(child)
+
+    return new_population
+
+# Main function to run the genetic algorithm
+def genetic_nn_sum(target_samples, population_size=100, generations=100):
+    x = np.array([[a, b] for a, b in target_samples])  # Input pairs
+    y = np.array([[a + b] for a, b in target_samples])  # Target sums
+
+    population = create_population(population_size)
+
+    for generation in range(generations):
+        population = evolve_population(population, x, y)
+        if generation % 10 == 0:
+            print(f"Generation {generation}, best fitness: {max(fitness(nn, x, y) for nn in population)}")
+
+    # Return the best network
+    best_nn = population[np.argmax([fitness(nn, x, y) for nn in population])]
+    return best_nn
+
+# Example usage
+if __name__ == "__main__":
+    # Create target samples (pairs of numbers)
+    target_samples = [(i, j) for i in range(10) for j in range(10)]
+
+    best_nn = genetic_nn_sum(target_samples)
+
+    # Test the best neural network
+    test_input = np.array([[3, 4], [5, 5], [10, 15]])
+    predictions = best_nn.predict(test_input)
+    print("Predictions for inputs {}: {}".format(test_input.tolist(), predictions.flatten()))
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+OUTPUT ->
+Generation 0, best fitness: -1.735313849989658
+Generation 10, best fitness: -0.006813690150706023
+Generation 20, best fitness: -0.009758617162756509
+Generation 30, best fitness: -0.005692400541171986
+Generation 40, best fitness: -0.0015120476534743687
+Generation 50, best fitness: -0.0005159010628629314
+Generation 60, best fitness: -0.000821317530725085
+Generation 70, best fitness: -0.0005053131202053904
+Generation 80, best fitness: -0.0006829830449609506
+Generation 90, best fitness: -0.0006834132470544011
+Predictions for inputs [[3, 4], [5, 5], [10, 15]]: [ 6.99516045  9.98541363 24.99038863]
